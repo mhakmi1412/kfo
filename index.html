@@ -961,12 +961,11 @@
             const user = ALLOWED_PHONES.find(u => u.phone === phone);
             if (!user) {
                 // السماح برقم تجريبي
-                if (phone === '0500000000') {
+                if (phone === '0507175012') {
                     verificationCode = '123456'; // رمز تجربة
                     currentPhoneForVerification = phone;
                     document.getElementById('loading-state').classList.remove('hidden');
                     document.getElementById('step-1-phone').classList.add('hidden');
-                    
                     setTimeout(() => {
                         document.getElementById('loading-state').classList.add('hidden');
                         document.getElementById('step-2-code').classList.remove('hidden');
@@ -977,7 +976,7 @@
                     }, 1500);
                     return;
                 }
-                showError(errorDiv, errorText, 'رقم الجوال غير مسجل. (جرب: 0500000000)');
+                showError(errorDiv, errorText, 'رقم الجوال غير مسجل. (جرب: 0507175012)');
                 return;
             }
 
@@ -1106,7 +1105,7 @@
         // Complete Login
         function completeLogin(phone) {
             let user;
-            if (phone === '0500000000') {
+            if (phone === '0507175012') {
                 user = { name: '🎯 مستخدم تجريبي' };
             } else {
                 user = ALLOWED_PHONES.find(u => u.phone === phone);
