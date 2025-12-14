@@ -72,6 +72,20 @@
         .animate-fade-in {
             animation: fadeIn 0.4s ease-out forwards;
         }
+
+        /* Dark Mode Styles */
+        body.dark {
+            background-color: #1a1a1a;
+            color: #e5e5e5;
+        }
+        
+        body.dark .bg-white {
+            background-color: #2d2d2d !important;
+        }
+        
+        body.dark .text-gray-800 {
+            color: #e5e5e5 !important;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col text-gray-800 select-none">
@@ -189,12 +203,33 @@
                     </div>
                 </div>
 
+                <!-- إحصائيات الأداء -->
+                <div id="performance-stats" class="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200 mb-6 text-right">
+                    <h3 class="font-bold text-blue-900 mb-3 flex items-center justify-end gap-2">
+                        <i class="fa-solid fa-chart-bar"></i> تحليل الأداء
+                    </h3>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div class="bg-white p-2 rounded">
+                            <div class="font-bold text-purple-600" id="avg-time">0s</div>
+                            <div class="text-gray-600">متوسط الوقت</div>
+                        </div>
+                        <div class="bg-white p-2 rounded">
+                            <div class="font-bold text-blue-600" id="total-time">0m</div>
+                            <div class="text-gray-600">الوقت الكلي</div>
+                        </div>
+                        <div class="bg-white p-2 rounded">
+                            <div class="font-bold text-indigo-600" id="difficulty-level">متوسط</div>
+                            <div class="text-gray-600">مستوى الصعوبة</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex flex-col gap-3">
                     <button onclick="shareResult()" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl active:bg-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-200">
                         <i class="fa-solid fa-share-nodes"></i> مشاركة نتيجتي
                     </button>
                     
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 flex-col md:flex-row">
                         <button onclick="restartQuiz()" class="flex-1 bg-teal-600 text-white font-bold py-3 px-4 rounded-xl active:bg-teal-700 transition-colors">
                             <i class="fa-solid fa-rotate-right ml-1"></i> إعادة
                         </button>
@@ -401,7 +436,7 @@
             { c: "الفصل 14: التمويل", q: "العائق الحقيقي الرئيسي الذي يقلل من احتمالات النجاح في التفاوض هو:", o: ["الهدف", "الأفكار", "شخصية المفاوض", "الشكل"], a: 2 },
             { c: "الفصل 14: التمويل", q: "على رائد الأعمال أن يستشير:", o: ["الأصدقاء", "الأقارب", "الأصدقاء من ذوي المعرفة", "المعارف"], a: 2 },
             { c: "الفصل 14: التمويل", q: "تنقسم عملية التفاوض إلى:", o: ["ثلاثة مراحل", "أربعة مراحل", "مرحلة واحدة", "خمسة مراحل"], a: 0 },
-            { c: "الفصل 14: التمويل", q: "أي من المزايا التالية هي ليست من مزايا التمويل بالملكية؟", o: ["أقل مخاطرة", "عدم وجود توقيتات سداد", "كلفة التمويل المنخفضة", "الوفورات الضريبية"], a: 3 },
+            { c: "الفصل 14: التمويل", q: "أي من المزايا التالية هي ليست من مزايا التمويل بالملكية؟", o: ["أقل مخاطرة", "عدم وجود توقيتات سداد", "كلفة التمويل المنخفضة", "الوفارات الضريبية"], a: 3 },
             { c: "الفصل 14: التمويل", q: "أي من الخيارات التالية هي عوامل اختيار مصادر التمويل المناسبة:", o: ["التسهيلات", "الشروط والإجراءات", "مبلغ التمويل", "جميع الإجابات صحيحة"], a: 3 },
             { c: "الفصل 14: التمويل", q: "سوق التمويل الريادي في السعودية سوق منافس ومن أمثلته:", o: ["بنك الرياض", "بنك التنمية الصناعية", "بنك الراجحي", "جميع الإجابات صحيحة"], a: 3 }
         ];
@@ -412,6 +447,9 @@
         let score = 0;
         let wrongAnswers = [];
         let selectedChapters = [];
+        let quizStartTime = null;
+        let questionStartTime = null;
+        let questionTimes = [];
 
         // --- 3. DOM Elements ---
         const startScreen = document.getElementById('start-screen');
@@ -521,13 +559,15 @@
             // Filter questions
             currentQuestions = ALL_QUESTIONS.filter(q => selectedChapters.includes(q.c));
             
-            // Randomize questions slightly for fun (Optional)
+            // Randomize questions
             currentQuestions.sort(() => Math.random() - 0.5);
 
             // Reset State
             currentIndex = 0;
             score = 0;
             wrongAnswers = [];
+            questionTimes = [];
+            quizStartTime = Date.now();
             
             // UI Transition
             startScreen.classList.add('hidden');
@@ -543,6 +583,7 @@
         // Render Current Question
         function renderQuestion() {
             const q = currentQuestions[currentIndex];
+            questionStartTime = Date.now();
             
             // Update Text
             questionText.textContent = q.q;
@@ -573,6 +614,10 @@
 
         // Check Answer
         function checkAnswer(selectedIndex, selectedBtn) {
+            // Record time for this question
+            const questionDuration = Math.round((Date.now() - questionStartTime) / 1000);
+            questionTimes.push(questionDuration);
+
             // Disable all buttons
             const buttons = optionsContainer.querySelectorAll('button');
             buttons.forEach(btn => btn.disabled = true);
@@ -584,14 +629,14 @@
             if (isCorrect) {
                 selectedBtn.classList.add('correct-answer');
                 feedbackMessage.textContent = "أحسنت! إجابة صحيحة 🎉";
-                feedbackMessage.className = "mb-3 p-3 rounded-lg text-center font-bold bg-green-100 text-green-700 animate-pulse";
+                feedbackMessage.className = "mb-3 p-3 rounded-lg text-center font-bold text-sm bg-green-100 text-green-700 animate-pulse";
                 score++;
             } else {
                 selectedBtn.classList.add('wrong-answer');
                 // Highlight correct answer
                 buttons[q.a].classList.add('correct-answer');
                 feedbackMessage.textContent = "إجابة خاطئة";
-                feedbackMessage.className = "mb-3 p-3 rounded-lg text-center font-bold bg-red-100 text-red-700";
+                feedbackMessage.className = "mb-3 p-3 rounded-lg text-center font-bold text-sm bg-red-100 text-red-700";
                 
                 wrongAnswers.push({
                     question: q.q,
@@ -622,16 +667,44 @@
             }
         }
 
+        // Calculate Performance Stats
+        function calculatePerformanceStats() {
+            const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
+            const avgTime = Math.round(totalTime / currentQuestions.length);
+            const percent = Math.round((score / currentQuestions.length) * 100);
+            
+            // Determine difficulty level
+            let difficultyLevel = 'متوسط';
+            if (percent >= 85) difficultyLevel = '⭐ سهل';
+            else if (percent >= 70) difficultyLevel = '⭐⭐ متوسط';
+            else if (percent >= 50) difficultyLevel = '⭐⭐⭐ صعب';
+            else difficultyLevel = '⭐⭐⭐⭐ جداً صعب';
+
+            return {
+                totalTime: Math.floor(totalTime / 60) + 'm ' + (totalTime % 60) + 's',
+                avgTime: avgTime + 's',
+                difficultyLevel: difficultyLevel,
+                percent: percent
+            };
+        }
+
         // Show Results
         function showResults() {
             quizScreen.classList.add('hidden');
             resultsScreen.classList.remove('hidden');
             window.scrollTo(0,0);
 
+            const stats = calculatePerformanceStats();
             const percent = Math.round((score / currentQuestions.length) * 100);
+            
             document.getElementById('final-score-percent').textContent = `${percent}%`;
             document.getElementById('correct-count').textContent = score;
             document.getElementById('wrong-count').textContent = currentQuestions.length - score;
+            
+            // Update performance stats
+            document.getElementById('total-time').textContent = stats.totalTime;
+            document.getElementById('avg-time').textContent = stats.avgTime;
+            document.getElementById('difficulty-level').textContent = stats.difficultyLevel;
 
             // Prepare Review Section
             const reviewContainer = document.getElementById('review-container');
@@ -674,9 +747,510 @@
             window.scrollTo(0,0);
         }
 
-        // Run Init
-        init();
+        // --- LOGIN SYSTEM WITH PHONE & WHATSAPP ---
 
+        // قاعدة بيانات الأرقام المسموحة
+        const ALLOWED_PHONES = [
+            { phone: '0501234567', name: 'محمد أحمد', verified: true },
+            { phone: '0551234567', name: 'فاطمة علي', verified: true },
+            { phone: '0561234567', name: 'خالد سالم', verified: true },
+            { phone: '0571234567', name: 'سارة عبدالله', verified: true },
+            { phone: '0581234567', name: 'علي محمود', verified: true },
+            { phone: '0591234567', name: 'نور محمد', verified: true },
+            { phone: '0541234567', name: 'أحمد علي', verified: true }
+        ];
+
+        let isLoggedIn = false;
+        let usedPhones = JSON.parse(localStorage.getItem('usedPhones') || '[]');
+        let currentUser = null;
+        let verificationCode = null;
+        let currentPhoneForVerification = null;
+        let loginAttempts = JSON.parse(localStorage.getItem('loginAttempts') || '{}');
+
+        // Generate Random Code (6 digits only)
+        function generateVerificationCode() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
+        }
+
+        // Check if already logged in
+        function checkLoginStatus() {
+            const sessionToken = sessionStorage.getItem('userToken');
+            if (sessionToken) {
+                currentUser = JSON.parse(sessionToken);
+                isLoggedIn = true;
+                showMainApp();
+            } else {
+                showLoginScreen();
+            }
+        }
+
+        // Show Login Screen
+        function showLoginScreen() {
+            const loginHTML = `
+                <div id="login-overlay" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-600 to-emerald-600 p-4 fixed inset-0 z-[9999]">
+                    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+                        <!-- Logo/Header -->
+                        <div class="text-center mb-8">
+                            <div class="bg-teal-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fa-solid fa-phone text-3xl text-teal-600"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">تسجيل الدخول</h2>
+                            <p class="text-gray-500 text-sm">أدخل رقم جوالك للمتابعة</p>
+                        </div>
+
+                        <!-- Step 1: Phone Input -->
+                        <div id="step-1-phone" class="space-y-4">
+                            <div>
+                                <label for="phone-input" class="block text-gray-700 text-sm font-bold mb-2">
+                                    <i class="fa-solid fa-mobile ml-2"></i>رقم الجوال
+                                </label>
+                                <div class="flex gap-2">
+                                    <input 
+                                        type="tel" 
+                                        id="phone-input" 
+                                        class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-teal-600 text-right font-bold text-lg" 
+                                        placeholder="05xxxxxxxx" 
+                                        maxlength="10"
+                                        inputmode="numeric"
+                                    >
+                                    <span class="flex items-center justify-center bg-gray-100 px-3 rounded-lg font-bold text-gray-600">
+                                        +966
+                                    </span>
+                                </div>
+                                <small class="text-gray-500 text-xs mt-1 block">
+                                    أدخل الرقم بدون 966 وابدأ بـ 05
+                                </small>
+                                <div id="phone-error" class="text-red-600 text-xs mt-2 hidden flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-xmark"></i> <span id="error-text"></span>
+                                </div>
+                            </div>
+
+                            <button 
+                                onclick="requestVerificationCode()" 
+                                class="w-full bg-teal-600 active:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg hover:bg-teal-700"
+                            >
+                                <i class="fa-solid fa-arrow-left"></i> طلب رمز التحقق
+                            </button>
+
+                            <div class="text-center text-xs text-gray-500">
+                                <i class="fa-solid fa-lock ml-1"></i> بيانات آمنة ومشفرة
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Code Verification -->
+                        <div id="step-2-code" class="space-y-4 hidden">
+                            <div class="text-center mb-4">
+                                <p class="text-gray-700 text-sm">
+                                    تم إرسال رمز التحقق إلى
+                                    <br>
+                                    <span class="font-bold text-teal-600" id="display-phone">+966 5xxxxxxxx</span>
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="code-input" class="block text-gray-700 text-sm font-bold mb-2">
+                                    <i class="fa-solid fa-key ml-2"></i>رمز التحقق (أرقام فقط)
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="code-input" 
+                                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-teal-600 text-center tracking-widest font-bold text-2xl" 
+                                    placeholder="000000" 
+                                    maxlength="6"
+                                    inputmode="numeric"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                >
+                                <div id="code-error" class="text-red-600 text-xs mt-2 hidden flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-xmark"></i> <span id="code-error-text"></span>
+                                </div>
+                            </div>
+
+                            <button 
+                                onclick="verifyCode()" 
+                                class="w-full bg-teal-600 active:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg hover:bg-teal-700"
+                            >
+                                <i class="fa-solid fa-check"></i> تحقق من الرمز
+                            </button>
+
+                            <button 
+                                onclick="backToPhoneInput()" 
+                                class="w-full bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors"
+                            >
+                                <i class="fa-solid fa-arrow-right"></i> تغيير الرقم
+                            </button>
+
+                            <div id="resend-section" class="text-center hidden">
+                                <p class="text-gray-600 text-xs mb-2">لم تستقبل الرمز؟</p>
+                                <button 
+                                    onclick="resendVerificationCode()" 
+                                    id="resend-btn"
+                                    class="text-teal-600 font-bold text-sm hover:underline"
+                                >
+                                    إعادة إرسال الرمز
+                                </button>
+                                <p id="resend-timer" class="text-gray-500 text-xs mt-1 hidden">
+                                    إعادة الإرسال متاح بعد <span id="timer">60</span> ثانية
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div id="loading-state" class="hidden text-center">
+                            <div class="inline-block">
+                                <i class="fa-solid fa-spinner fa-spin text-3xl text-teal-600 mb-4"></i>
+                                <p class="text-gray-700 font-bold">جاري المعالجة...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // إزالة أي عناصر دخول قديمة
+            const oldLogin = document.getElementById('login-overlay');
+            if (oldLogin) oldLogin.remove();
+
+            // إضافة نموذج الدخول
+            document.body.insertAdjacentHTML('afterbegin', loginHTML);
+            
+            // إضافة مستمع للأحرف في حقل الهاتف
+            document.getElementById('phone-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') requestVerificationCode();
+            });
+
+            // إضافة مستمع للأحرف في حقل الرمز
+            document.getElementById('code-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') verifyCode();
+            });
+        }
+
+        // Hide Login Screen
+        function hideLoginScreen() {
+            const loginOverlay = document.getElementById('login-overlay');
+            if (loginOverlay) {
+                loginOverlay.style.opacity = '0';
+                loginOverlay.style.transition = 'opacity 0.3s ease-out';
+                setTimeout(() => loginOverlay.remove(), 300);
+            }
+        }
+
+        // Validate Phone Number
+        function validatePhoneNumber(phone) {
+            const regex = /^05\d{8}$/;
+            return regex.test(phone);
+        }
+
+        // Request Verification Code
+        function requestVerificationCode() {
+            const phoneInput = document.getElementById('phone-input');
+            const phone = phoneInput.value.trim();
+            const errorDiv = document.getElementById('phone-error');
+            const errorText = document.getElementById('error-text');
+
+            // Validate
+            if (!phone) {
+                showError(errorDiv, errorText, 'أدخل رقم جوالك');
+                return;
+            }
+
+            if (!validatePhoneNumber(phone)) {
+                showError(errorDiv, errorText, 'صيغة الرقم غير صحيحة. يجب أن يكون: 05xxxxxxxx');
+                return;
+            }
+
+            // Check if phone is in allowed list OR demo code
+            const user = ALLOWED_PHONES.find(u => u.phone === phone);
+            if (!user) {
+                // السماح برقم تجريبي
+                if (phone === '0500000000') {
+                    verificationCode = '123456'; // رمز تجربة
+                    currentPhoneForVerification = phone;
+                    document.getElementById('loading-state').classList.remove('hidden');
+                    document.getElementById('step-1-phone').classList.add('hidden');
+                    
+                    setTimeout(() => {
+                        document.getElementById('loading-state').classList.add('hidden');
+                        document.getElementById('step-2-code').classList.remove('hidden');
+                        document.getElementById('display-phone').textContent = `+966 5xxxxxxxx`;
+                        document.getElementById('code-input').focus();
+                        document.getElementById('resend-section').classList.remove('hidden');
+                        console.log('🔔 رمز التجربة: 123456');
+                    }, 1500);
+                    return;
+                }
+                showError(errorDiv, errorText, 'رقم الجوال غير مسجل. (جرب: 0500000000)');
+                return;
+            }
+
+            // Check if already used
+            if (usedPhones.includes(phone)) {
+                showError(errorDiv, errorText, 'هذا الرقم تم استخدامه مسبقاً');
+                return;
+            }
+
+            // Check for too many attempts
+            const now = Date.now();
+            const attemptKey = phone;
+            if (loginAttempts[attemptKey]) {
+                const lastAttempt = loginAttempts[attemptKey].lastAttempt;
+                const attemptCount = loginAttempts[attemptKey].count;
+                
+                if (now - lastAttempt < 60000 && attemptCount >= 3) {
+                    showError(errorDiv, errorText, 'عدد المحاولات كثير. حاول لاحقاً');
+                    return;
+                }
+            }
+
+            // Generate Code
+            verificationCode = generateVerificationCode();
+            currentPhoneForVerification = phone;
+
+            // Send WhatsApp Message
+            sendWhatsAppMessage(phone, user.name, verificationCode);
+
+            // Show loading
+            document.getElementById('loading-state').classList.remove('hidden');
+            document.getElementById('step-1-phone').classList.add('hidden');
+
+            // Update attempt count
+            loginAttempts[attemptKey] = {
+                lastAttempt: now,
+                count: (loginAttempts[attemptKey]?.count || 0) + 1,
+                code: verificationCode
+            };
+            localStorage.setItem('loginAttempts', JSON.stringify(loginAttempts));
+
+            // Simulate delay then show code verification
+            setTimeout(() => {
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('step-2-code').classList.remove('hidden');
+                document.getElementById('display-phone').textContent = `+966 ${phone.substring(1)}`;
+                document.getElementById('code-input').focus();
+                
+                // Show resend button after 5 seconds
+                setTimeout(() => {
+                    document.getElementById('resend-section').classList.remove('hidden');
+                    startResendTimer();
+                }, 5000);
+            }, 1500);
+
+            errorDiv.classList.add('hidden');
+        }
+
+        // Send WhatsApp Message
+        async function sendWhatsAppMessage(phone, name, code) {
+            // استبدل هذا الرابط برابط Railway الخاص بك
+            const BACKEND_URL = 'https://kfo-backend.up.railway.app';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/send-whatsapp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone: '+966' + phone.substring(1),
+                        name: name,
+                        code: code
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('✅ تم إرسال الرسالة عبر WhatsApp');
+                    showNotification('تم إرسال رمز التحقق إلى واتساب', 'success');
+                    return true;
+                } else {
+                    console.error('❌ فشل الإرسال:', data.error);
+                    showNotification('حدث خطأ في إرسال الرسالة', 'error');
+                    
+                    // الاحتفاظ بالكود في console للاختبار
+                    console.log('🔔 رمز التحقق للاختبار:', code);
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ خطأ في الاتصال بالخادم:', error);
+                
+                // الاحتفاظ بالكود في console للاختبار
+                console.log('🔔 رمز التحقق (وضع offline):', code);
+                console.log('الهاتف:', phone);
+                console.log('الاسم:', name);
+                
+                showNotification('يعمل التطبيق في وضع التجربة', 'info');
+                return false;
+            }
+        }
+
+        // Verify Code
+        function verifyCode() {
+            const codeInput = document.getElementById('code-input');
+            const code = codeInput.value.trim();
+            const errorDiv = document.getElementById('code-error');
+            const errorText = document.getElementById('code-error-text');
+
+            if (!code) {
+                showError(errorDiv, errorText, 'أدخل رمز التحقق');
+                return;
+            }
+
+            if (code !== verificationCode) {
+                showError(errorDiv, errorText, 'الرمز غير صحيح');
+                codeInput.value = '';
+                return;
+            }
+
+            // Successful verification
+            completeLogin(currentPhoneForVerification);
+        }
+
+        // Complete Login
+        function completeLogin(phone) {
+            let user;
+            if (phone === '0500000000') {
+                user = { name: '🎯 مستخدم تجريبي' };
+            } else {
+                user = ALLOWED_PHONES.find(u => u.phone === phone);
+            }
+            
+            // Mark phone as used
+            usedPhones.push(phone);
+            localStorage.setItem('usedPhones', JSON.stringify(usedPhones));
+
+            // Create session
+            currentUser = {
+                name: user.name,
+                phone: phone,
+                loginTime: new Date().toLocaleString('ar-SA'),
+                token: Math.random().toString(36).substr(2, 9)
+            };
+
+            sessionStorage.setItem('userToken', JSON.stringify(currentUser));
+            isLoggedIn = true;
+
+            // Success animation
+            const overlay = document.getElementById('login-overlay');
+            const successHTML = `
+                <div class="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <div class="bg-white rounded-2xl p-8 text-center shadow-2xl">
+                        <i class="fa-solid fa-check-circle text-5xl text-green-500 mb-4 block"></i>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">تم التحقق بنجاح!</h3>
+                        <p class="text-gray-600">مرحباً ${currentUser.name}</p>
+                    </div>
+                </div>
+            `;
+            overlay.insertAdjacentHTML('beforeend', successHTML);
+
+            // Hide login after animation
+            setTimeout(() => {
+                hideLoginScreen();
+            }, 1500);
+        }
+
+        // Back to Phone Input
+        function backToPhoneInput() {
+            verificationCode = null;
+            currentPhoneForVerification = null;
+            document.getElementById('step-2-code').classList.add('hidden');
+            document.getElementById('step-1-phone').classList.remove('hidden');
+            document.getElementById('resend-section').classList.add('hidden');
+            document.getElementById('phone-input').focus();
+            clearInterval(window.resendTimer);
+        }
+
+        // Resend Verification Code
+        function resendVerificationCode() {
+            const user = ALLOWED_PHONES.find(u => u.phone === currentPhoneForVerification);
+            verificationCode = generateVerificationCode();
+            
+            sendWhatsAppMessage(currentPhoneForVerification, user.name, verificationCode);
+            
+            document.getElementById('resend-btn').disabled = true;
+            document.getElementById('resend-btn').classList.add('opacity-50');
+            document.getElementById('resend-timer').classList.remove('hidden');
+            startResendTimer();
+            
+            // Show success notification
+            showNotification('تم إعادة إرسال الرمز بنجاح', 'success');
+        }
+
+        // Start Resend Timer
+        function startResendTimer() {
+            let seconds = 60;
+            const timerEl = document.getElementById('timer');
+            const resendBtn = document.getElementById('resend-btn');
+            
+            window.resendTimer = setInterval(() => {
+                seconds--;
+                timerEl.textContent = seconds;
+                
+                if (seconds === 0) {
+                    clearInterval(window.resendTimer);
+                    document.getElementById('resend-timer').classList.add('hidden');
+                    resendBtn.disabled = false;
+                    resendBtn.classList.remove('opacity-50');
+                }
+            }, 1000);
+        }
+
+        // Helper: Show Error
+        function showError(errorDiv, errorText, message) {
+            errorText.textContent = message;
+            errorDiv.classList.remove('hidden');
+            const input = errorDiv.parentElement.querySelector('input');
+            if (input) {
+                input.classList.add('border-red-500');
+                setTimeout(() => {
+                    input.classList.remove('border-red-500');
+                }, 2000);
+            }
+        }
+
+        // Helper: Show Notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white font-bold shadow-lg z-[10000] ${
+                type === 'success' ? 'bg-green-500' : 'bg-blue-500'
+            }`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.3s';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Show Main App
+        function showMainApp() {
+            // إضافة شريط المستخدم في الأعلى
+            const header = document.querySelector('header');
+            const userBar = document.createElement('div');
+            userBar.className = "bg-teal-800/50 backdrop-blur-sm px-4 py-2 text-teal-50 text-xs flex justify-between items-center border-b border-teal-700/50";
+            userBar.innerHTML = `
+                <span><i class="fa-solid fa-circle-user ml-1"></i> ${currentUser.name}</span>
+                <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded font-bold transition-colors text-xs">
+                    <i class="fa-solid fa-sign-out ml-1"></i> خروج
+                </button>
+            `;
+            header.parentElement.insertBefore(userBar, header);
+        }
+
+        // Logout Function
+        function logout() {
+            if (confirm('هل تريد تسجيل الخروج؟')) {
+                sessionStorage.removeItem('userToken');
+                isLoggedIn = false;
+                currentUser = null;
+                location.reload();
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            checkLoginStatus();
+            init();
+        });
     </script>
 </body>
 </html>
